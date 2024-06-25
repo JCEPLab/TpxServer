@@ -50,7 +50,7 @@ private:
     QLabel *mAutoRestartLabel {nullptr};
     QCheckBox *mAutoRestartButton {nullptr};
 
-    TimepixConfig mCurrentConfig {};
+    //TimepixConfig mCurrentConfig {};
 
 };
 

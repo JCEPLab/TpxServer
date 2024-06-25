@@ -8,6 +8,7 @@
 #include "server/TimepixConnectionManager.h"
 
 #include <map>
+#include <set>
 #include <iostream>
 
 const std::map<ServerCommand, void (PythonConnectionManager::*)(const DataVec &)> COMMAND_MAP {
@@ -59,6 +60,18 @@ const std::map<ServerCommand, void (PythonConnectionManager::*)(const DataVec &)
     {ServerCommand::SET_UDP_PORT, &PythonConnectionManager::bindUdpPort}
 };
 
+std::set<ServerCommand> UDP_THREAD_FORWARD_COMMANDS {
+    ServerCommand::SET_RAW_TPX3_PATH,
+    ServerCommand::GET_RAW_DATA_SERVER_PATH
+};
+
+std::set<ServerCommand> CLUSTER_THREAD_FORWARD_COMMANDS {
+    ServerCommand::GET_CLUSTER_SERVER_PATH,
+    ServerCommand::SET_CLUSTER_INPUT_SERVER,
+    ServerCommand::SET_CLUSTER_PARAMETERS,
+    ServerCommand::FLUSH_CLUSTERS
+};
+
 PythonConnectionManager::PythonConnectionManager(CommsThread &thread, TimepixConnectionManager &tpx) :
     mThread(thread),
     mTpxManager(&tpx) {
@@ -77,8 +90,7 @@ void PythonConnectionManager::open(unsigned int port) {
 
     mCommandSocket = std::make_unique<zmq::socket_t>(mThread.getZmq(), zmq::socket_type::rep);
     mCommandSocket->bind("tcp://*:" + std::to_string(port));
-    if(DEBUG_OUTPUT)
-        std::cout << "Opened client socket on port " << port << std::endl;
+    DEBUG("Opened client socket on port " + port);
 
 }
 
@@ -86,8 +98,7 @@ void PythonConnectionManager::close() {
 
     mCommandSocket->close();
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Closing client connection" << std::endl;
+    DEBUG("Closing client connection");
 
 }
 
@@ -123,29 +134,15 @@ void PythonConnectionManager::handleCommand(zmq::message_t &command) {
 
     std::uint32_t com_size = command.size();
     if(com_size % 4) {
-        sendError(ServerCommand::ERROR_OCCURED);
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
         return;
     }
 
     std::size_t data_size = (com_size / 4) - 1;
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Client: received command " << com_code_int << std::endl;
+    DEBUG("Client: received command " + std::to_string(com_code_int));
 
-    if (!COMMAND_MAP.contains(command_code)) {
-
-        switch(command_code) {
-        case ServerCommand::SET_RAW_TPX3_PATH:
-        case ServerCommand::GET_RAW_DATA_SERVER_PATH:
-            forwardToSecondaryThread(mThread.getUdpThreadSocket(), command);
-            break;
-
-        default:
-            sendError(ServerCommand::UNKNOWN_COMMAND);
-            return;
-        }
-
-    } else {
+    if (COMMAND_MAP.contains(command_code)) {
         DataVec data;
         data.reserve(data_size);
         for(auto ix = 0; ix < data_size; ++ix)
@@ -154,13 +151,19 @@ void PythonConnectionManager::handleCommand(zmq::message_t &command) {
         auto f = COMMAND_MAP.at(command_code);
         mLastCommand = command_code;
         ((*this).*f)(data);
+    } else if(UDP_THREAD_FORWARD_COMMANDS.contains(command_code)) {
+        forwardToSecondaryThread(mThread.getUdpThreadSocket(), command);
+    } else if (CLUSTER_THREAD_FORWARD_COMMANDS.contains(command_code)) {
+        forwardToSecondaryThread(mThread.getClusterThreadSocket(), command);
+    } else {
+        sendError(ServerCommand::UNKNOWN_COMMAND);
+        return;
     }
 }
 
 void PythonConnectionManager::sendError(ServerCommand errcode) {
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Sending error code to client: " << static_cast<std::uint32_t>(errcode) << std::endl;
+    DEBUG("Sending error code to client: " + std::to_string(static_cast<std::uint32_t>(errcode)));
 
     mLastCommand = errcode;
     sendResponse({});
@@ -169,8 +172,7 @@ void PythonConnectionManager::sendError(ServerCommand errcode) {
 
 void PythonConnectionManager::sendResponse(const DataVec &data) {
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Client: sending response" << std::endl;
+    DEBUG("Client: sending response");
 
     DataVec send_data;
     send_data.reserve(data.size() + 1);
@@ -185,7 +187,7 @@ void PythonConnectionManager::sendResponse(const DataVec &data) {
 void PythonConnectionManager::sendPixelConfigData(const DataVec &data) {
 
     if((data.size() - 1) % 48)
-        sendError(ServerCommand::ERROR_OCCURED);
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
     else
         mTpxManager->queueCommand(this, TpxCommand::CMD_SET_PIXCONF, data);
 
@@ -194,7 +196,7 @@ void PythonConnectionManager::sendPixelConfigData(const DataVec &data) {
 void PythonConnectionManager::bindUdpPort(const DataVec &data) {
 
     if(data.size() != 1) {
-        sendError(ServerCommand::ERROR_OCCURED);
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
         return;
     }
 
@@ -217,29 +219,23 @@ void PythonConnectionManager::forwardToSecondaryThread(zmq::socket_t *cmd_socket
         if(cmd_socket == nullptr) {
             sendError(ServerCommand::THREAD_NOT_STARTED);
             return;
-        } else if (!cmd_socket->connected()) {
+        } else if (!cmd_socket->handle()) {
             sendError(ServerCommand::THREAD_NOT_CONNECTED);
             return;
         }
 
-        if(DEBUG_OUTPUT)
-            std::cout << "Forwarding message to secondary thread" << std::endl;
+        DEBUG("Forwarding message to secondary thread");
 
         cmd_socket->send(msg, zmq::send_flags::none);
-
-        if(DEBUG_OUTPUT)
-            std::cout << "Forwarded message to secondary thread" << std::endl;
 
         zmq::message_t response;
         cmd_socket->recv(response);
 
-        if(DEBUG_OUTPUT)
-            std::cout << "Received response from secondary thread" << std::endl;
+        DEBUG("Received response from secondary thread");
 
         mCommandSocket->send(response, zmq::send_flags::dontwait);
 
-        if(DEBUG_OUTPUT)
-            std::cout << "Forwarded response to client" << std::endl;
+        DEBUG("Forwarded response to client");
 
     } catch (...) {
 

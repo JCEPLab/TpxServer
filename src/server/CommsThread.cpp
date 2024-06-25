@@ -11,6 +11,7 @@
 #include "zmq.hpp"
 
 #include "server/UdpThread.h"
+#include "server/ClusterThread.h"
 
 #include "server/TimepixConnectionManager.h"
 #include "server/PythonConnectionManager.h"
@@ -37,6 +38,8 @@ void CommsThread::execute() {
     mClientManager = std::make_unique<PythonConnectionManager>(*this, *mTpxManager.get());
     mClientManager->open(mSettings.outgoing_port);
 
+    startClusterThread();
+
     while(!shouldCancel()) {
 
         if(mShouldResetClient) {
@@ -55,15 +58,13 @@ void CommsThread::execute() {
             emit err("A network error occurred while communicating with the Timepix (errcode=" + std::to_string(ex.code().value()) + ")");
             emit err(ex.what());
             emit err("Server is shutting down.");
-            if(DEBUG_OUTPUT)
-                std::cout << "Terminating TCP thread due to a network error: [" << ex.code().value() << "]: " << ex.what() << std::endl;
+            DEBUG("Terminating TCP thread due to a network error: [" + std::to_string(ex.code().value()) + "]: " + ex.what());
             break;
         } catch (const std::exception &ex) {
             emit err("An unknown error occurred:");
             emit err(ex.what());
             emit err("Server is shutting down.");
-            if(DEBUG_OUTPUT)
-                std::cout << "Terminating TCP thread due to an unknown error: " << ex.what() << std::endl;
+            DEBUG("Terminating TCP thread due to an unknown error: " + std::string(ex.what()));
             cancel();
             break;
         }
@@ -73,13 +74,21 @@ void CommsThread::execute() {
     mTpxManager->clearAnyClientRequest();
     mTpxManager->terminateConnection();
 
-    if(mUdpThread)
+    if(mUdpThread) {
         mUdpThread->cancel();
+        mUdpThread = nullptr; // should auto-delete once run() is finished
+    }
     if(mUdpCommandSocket)
         mUdpCommandSocket->close();
 
-    if(DEBUG_OUTPUT)
-        std::cout << "TCP thread terminated" << std::endl;
+    if(mClusterThread) {
+        mClusterThread->cancel();
+        mClusterThread = nullptr; // should auto-delete once run() is finished
+    }
+    if(mClusterCommandSocket)
+        mClusterCommandSocket->close();
+
+    DEBUG("TCP thread terminated");
 
     emit log("Server thread shutting down");
 
@@ -90,7 +99,10 @@ void CommsThread::resetClientConnection() {
     mShouldResetClient = true;
 
     if(mUdpThread)
+        mUdpThread->cancel();    if(mUdpThread) {
         mUdpThread->cancel();
+        mUdpThread = nullptr; // should auto-delete once run() is finished
+    }
 
 }
 
@@ -115,6 +127,17 @@ void CommsThread::bindUdpPort(unsigned host_port) {
 
 }
 
+void CommsThread::startClusterThread() {
+
+    if(mClusterThread)
+        return;
+
+    mClusterThread = new ClusterThread(*this);
+    mClusterCommandSocket = mClusterThread->getCommandClient();
+    QThreadPool::globalInstance()->start(mClusterThread);
+
+}
+
 zmq::context_t& CommsThread::getZmq() {
 
     return mZmq;
@@ -124,5 +147,11 @@ zmq::context_t& CommsThread::getZmq() {
 zmq::socket_t* CommsThread::getUdpThreadSocket() {
 
     return mUdpCommandSocket.get();
+
+}
+
+zmq::socket_t* CommsThread::getClusterThreadSocket() {
+
+    return mClusterCommandSocket.get();
 
 }

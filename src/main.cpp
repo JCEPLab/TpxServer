@@ -2,6 +2,9 @@
 
 #include "ui/MainWindow.h"
 
+#include <chrono>
+#include <thread>
+
 #include "asio.hpp"
 
 int main(int argc, char *argv[]) {
@@ -16,6 +19,10 @@ int main(int argc, char *argv[]) {
     }
     MainWindow window(autostart);
 
-    return QApplication::exec();
+    auto retval = QApplication::exec();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    return retval;
 
 }

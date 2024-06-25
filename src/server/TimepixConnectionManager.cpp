@@ -83,12 +83,10 @@ void TimepixConnectionManager::terminateConnection() {
 
             mAsioIO.reset();
 
-            if(DEBUG_OUTPUT)
-                std::cout << "Closed Timepix connection" << std::endl;
+            DEBUG("Closed Timepix connection");
         } catch (asio::system_error &err) {
             mThread.sendWarn("Exception thrown while closing TCP connection");
-            if(DEBUG_OUTPUT)
-                std::cout << "Exception thrown while closing TCP connection" << std::endl;
+            DEBUG("Exception thrown while closing TCP connection");
             mThread.sendWarn(err.what());
         }
     }
@@ -111,10 +109,9 @@ void TimepixConnectionManager::poll() {
                 mQueuedCommands.pop_front();
                 mThread.sendLog("Resetting Timepix connection");
                 mLastCommandSource = nullptr;
-                if(DEBUG_OUTPUT)
-                    std::cout << "Resetting Timepix connection due to SPIDR reset" << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-                attemptConnection(mLastHostIp, mLastHostPort, mLastServerIp, mLastServerPort);
+                DEBUG("Resetting Timepix connection due to SPIDR reset");
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                attemptConnection(mLastHostIp, mLastHostPort, mLastServerIp, mLastServerPort, true);
                 return;
             }
         }
@@ -126,11 +123,11 @@ void TimepixConnectionManager::poll() {
         mThread.sendErr("A network error occurred while communicating with the Timepix (errcode=" + std::to_string(ex.code().value()) + ")");
         mThread.sendErr(ex.what());
 
-        if(DEBUG_OUTPUT)
-            std::cout << "Network error: [" << ex.code().value() << "]: " << ex.what() << std::endl;
+        DEBUG("Network error: [" + std::to_string(ex.code().value()) + "]: " + ex.what());
 
         terminateConnection();
-        attemptConnection(mLastHostIp, mLastHostPort, mLastServerIp, mLastServerPort);
+        //attemptConnection(mLastHostIp, mLastHostPort, mLastServerIp, mLastServerPort);
+        mThread.cancel();
 
         this->clearAnyClientRequest();
     }
@@ -175,8 +172,7 @@ void TimepixConnectionManager::attemptConnection(const std::string &host_ip, int
 
         mThread.sendErr(str);
 
-        if(DEBUG_OUTPUT)
-            std::cout << "An unknown error occurred in the server thread; terminating server." << std::endl;
+        DEBUG("An unknown error occurred in the server thread; terminating server.");
 
         mThread.cancel();
     }
@@ -199,9 +195,7 @@ void TimepixConnectionManager::initializeConnection(const asio::error_code &err)
     }
 
     mThread.sendLog("Successfully connected.");
-    if(DEBUG_OUTPUT) {
-        std::cout << "New TCP connection established" << std::endl;
-    }
+    DEBUG("New TCP connection established");
 
 }
 
@@ -264,12 +258,11 @@ void TimepixConnectionManager::sendCommand(TpxCommand cmd, const DataVec &data, 
             if(ix != byte_size - 1)
                 ss << ", ";
         }
-        std::cout << ss.str() << std::endl;
+        DEBUG(ss.str());
     }
 
     mTpxSocket->async_send(asio::buffer(mCommandBuffer.data(), byte_size), [this](const asio::error_code &err, std::size_t bytes) {
-        if(DEBUG_OUTPUT)
-            std::cout << "\tCommand sent" << std::endl;
+        DEBUG("\tCommand sent");
 
         commandSent(err, bytes);
     });

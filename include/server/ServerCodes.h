@@ -7,6 +7,7 @@ enum class ServerCommand : std::uint32_t {
 
     NOP = 0,
 
+// Commands to control the Timepix
     GET_SOFTWARE_VERSION = 1,
     GET_FIRMWARE_VERSION = 2,
 
@@ -69,10 +70,19 @@ enum class ServerCommand : std::uint32_t {
 
     SET_SENSEDAC = 48,
 
+// Commands to control the UDP server
     SET_UDP_PORT = 500,
     SET_RAW_TPX3_PATH = 501,
     GET_RAW_DATA_SERVER_PATH = 502,
 
+// Commands to control the clustering server
+    GET_CLUSTER_SERVER_PATH = 600,
+    SET_CLUSTER_INPUT_SERVER = 601,
+    SET_CLUSTER_PARAMETERS = 602,
+    FLUSH_CLUSTERS = 603,
+
+// Error codes
+    INVALID_COMMAND_DATA = 993,
     CANT_OPEN_FILE = 994,
     THREAD_NOT_CONNECTED = 995,
     THREAD_NOT_STARTED = 996,

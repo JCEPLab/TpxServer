@@ -78,7 +78,7 @@ private:
 template<std::size_t sz>
 void TimepixConnectionManager::genericHandler(const DataVec &data) {
     if(data.size() != sz)
-        mLastCommandSource->sendError(ServerCommand::ERROR_OCCURED);
+        mLastCommandSource->sendError(ServerCommand::INVALID_COMMAND_DATA);
     else
         mLastCommandSource->sendResponse(data);
 }

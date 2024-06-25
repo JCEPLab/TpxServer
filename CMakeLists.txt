@@ -44,7 +44,15 @@ add_executable(TpxServer
         src/server/UdpConnectionManager.cpp
         include/server/TimepixCommandInfo.h
         include/server/SecondaryThread.h
-        src/server/SecondaryThread.cpp)
+        src/server/SecondaryThread.cpp
+        include/server/ClusterThread.h
+        src/server/ClusterThread.cpp
+        include/server/ClusteringManager.h
+        src/server/ClusteringManager.cpp
+
+        src/clustering_test.cpp
+
+    )
 
 target_include_directories(TpxServer PUBLIC
         ${CMAKE_SOURCE_DIR}/include
@@ -73,23 +81,3 @@ target_compile_definitions(TpxServer PUBLIC ASIO_SEPARATE_COMPILATION)
 target_compile_options(TpxServer PUBLIC -D_WIN32_WINNT=0xA00)
 
 target_link_options(TpxServer PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
-
-#project(DummySpidr)
-#
-#set(CMAKE_CXX_STANDARD 20)
-#
-#add_executable(DummySpidr
-#        test/DummySpidr.h
-#        test/DummySpidr.cpp
-#
-#        ext/asio_imp.cpp)
-#
-#target_include_directories(DummySpidr PUBLIC
-#        ${CMAKE_SOURCE_DIR}/include
-#        ${CMAKE_SOURCE_DIR}/ext/asio-1.28.0/include
-#        ${CMAKE_SOURCE_DIR}/ext/toml/include)
-#
-#target_compile_definitions(DummySpidr PUBLIC ASIO_SEPARATE_COMPILATION)
-#
-#target_compile_options(DummySpidr PUBLIC -D_WIN32_WINNT=0xA00)
-#

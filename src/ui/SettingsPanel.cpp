@@ -173,7 +173,7 @@ SettingsPanel::SettingsPanel(QWidget *parent) :
     {
         mAutoRestartLabel = new QLabel("Automatically Restart on Crash:", this);
         mAutoRestartButton = new QCheckBox(this);
-        mAutoRestartButton->setChecked(true);
+        mAutoRestartButton->setChecked(false);
 
         mLayout->addWidget(mAutoRestartLabel, 5, 0);
         mLayout->addWidget(mAutoRestartButton, 5, 1);
@@ -199,8 +199,7 @@ CommsSettings SettingsPanel::getSettings() {
         .host_port = std::stoul(mHostPortSettingEdit->text().toStdString()),
         .timepix_ip = mTimepixIpSettingEdit->text().toStdString(),
         .timepix_port = std::stoul(mTimepixPortSettingEdit->text().toStdString()),
-        .outgoing_port = std::stoul(mOutgoingPortSettingEdit->text().toStdString()),
-        .config = mCurrentConfig
+        .outgoing_port = std::stoul(mOutgoingPortSettingEdit->text().toStdString())
     };
 
 }

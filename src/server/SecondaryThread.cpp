@@ -11,15 +11,13 @@ SecondaryThread::SecondaryThread(CommsThread &parent) :
     mCommandSocket = std::make_unique<zmq::socket_t>(mParent.getZmq(), zmq::socket_type::rep);
     mCommandSocket->bind("tcp://*:*");
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Opened secondary thread at " << mCommandSocket->get(zmq::sockopt::last_endpoint) << std::endl;
+    DEBUG("Opened secondary thread at " + mCommandSocket->get(zmq::sockopt::last_endpoint));
 
 }
 
 SecondaryThread::~SecondaryThread() {
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Closing client connection" << std::endl;
+    DEBUG("Closing secondary thread");
     mCommandSocket->close();
 
 }
@@ -68,8 +66,7 @@ void SecondaryThread::pollCommands() {
 
             std::size_t data_size = (com_size / 4) - 1;
 
-            if(DEBUG_OUTPUT)
-                std::cout << "Secondary thread: received command " << com_code_int << std::endl;
+            DEBUG("Secondary thread: received command " + std::to_string(com_code_int));
 
             mLastCommand = command_code;
             DataVec data;

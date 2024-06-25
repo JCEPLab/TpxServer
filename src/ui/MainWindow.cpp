@@ -121,8 +121,7 @@ void MainWindow::stopServer() {
 
     logger::log("Stopping server...");
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Terminating server from main window" << std::endl;
+    DEBUG("Terminating server from main window");
 
     mManuallyCancelled = true;
 
@@ -143,8 +142,7 @@ void MainWindow::serverDone() {
 
     if(!mManuallyCancelled && mSettingsPanel->autoRestartChecked()) {
         logger::log("Restarting server...");
-        if(DEBUG_OUTPUT)
-            std::cout << "Auto-restarting server" << std::endl;
+        DEBUG("Auto-restarting server");
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
         launchServer();
     }
@@ -154,6 +152,7 @@ void MainWindow::serverDone() {
 void MainWindow::closeEvent(QCloseEvent *event) {
 
     stopServer();
+
     QMainWindow::closeEvent(event);
 
 }

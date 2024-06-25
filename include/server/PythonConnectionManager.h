@@ -62,7 +62,7 @@ void PythonConnectionManager::genericForward(const DataVec &data) {
         ss << std::hex << std::uppercase << static_cast<std::uint32_t>(cmd);
         ss << "]: expected command of size " << std::dec << sz << ", received " << data.size();
         emit mThread.warn(ss.str());
-        sendError(ServerCommand::ERROR_OCCURED);
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
     } else {
         mTpxManager->queueCommand(this, cmd, data);
     }

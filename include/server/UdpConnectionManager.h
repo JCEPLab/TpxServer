@@ -45,7 +45,7 @@ private:
 
     bool mIsCancelled {false};
 
-    std::vector<std::uint8_t> mTempBuffer {}; // allocated to the same size as mUdpBuffer; this avoids constant malloc's
+    std::vector<std::uint64_t> mTempBuffer {}; // allocated to the same size as mUdpBuffer; this avoids constant malloc's
     std::unique_ptr<zmq::socket_t> mPublishSocket {nullptr};
 
 };

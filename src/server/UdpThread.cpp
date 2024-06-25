@@ -1,7 +1,6 @@
 #include "server/UdpThread.h"
 
 #include <string>
-#include <iostream>
 #include <cstring>
 
 UdpThread::UdpThread(CommsThread &parent, std::string host_ip, unsigned int host_port) :
@@ -65,8 +64,7 @@ void UdpThread::setRawTpxPath(const DataVec &data) {
 
     std::string s(path.data());
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Setting save path for raw *.tpx3 files to: " << s << std::endl;
+    DEBUG("Setting save path for raw *.tpx3 files to: " + s);
 
     if(mUdpManager->setSaveFile(s)) {
         sendResponse(data);
@@ -80,7 +78,7 @@ void UdpThread::setRawTpxPath(const DataVec &data) {
 void UdpThread::sendRawDataServerPath(const DataVec &data) {
 
     if(data.size() != 0) {
-        sendError(ServerCommand::ERROR_OCCURED);
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
         return;
     }
 

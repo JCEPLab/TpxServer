@@ -57,8 +57,7 @@ void UdpConnectionManager::attemptConnection(const std::string &host_ip, int hos
 
         mThread.sendErr(str);
 
-        if(DEBUG_OUTPUT)
-            std::cout << "An unknown error occurred in the UDP server thread; terminating server." << std::endl;
+        DEBUG("An unknown error occurred in the UDP server thread; terminating server.");
 
         mThread.cancel();
     }
@@ -126,8 +125,7 @@ bool UdpConnectionManager::setSaveFile(const std::string &path) {
         mFile.close();
 
     if(path.empty()) {
-        if(DEBUG_OUTPUT)
-            std::cout << "Not saving to file" << std::endl;
+        DEBUG("Not saving to file");
         return true;
     }
 
@@ -141,13 +139,11 @@ bool UdpConnectionManager::setSaveFile(const std::string &path) {
 
     success &= mFile.is_open();
     if(!success){
-        if(DEBUG_OUTPUT)
-            std::cout << "Error opening file at " << path << std::endl;
+        DEBUG("Error opening file at " + path);
         return false;
     }
 
-    if(DEBUG_OUTPUT)
-        std::cout << "Saving to file " << path << std::endl;
+    DEBUG("Saving to file " + path);
     mThread.sendLog("Saving image to " + path);
 
     return true;
@@ -165,6 +161,9 @@ std::string UdpConnectionManager::getPublishServerAddress() {
 
 void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data, std::size_t size) {
 
+    static auto last_echo_time = std::chrono::high_resolution_clock::now();
+    static int last_sec_packets = 0;
+
     // we publish data with the following format:
     // for each packet:
     //      X address:  8 bits
@@ -177,6 +176,8 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
     auto packet_ptr = reinterpret_cast<const std::uint64_t*>(data.data());
     auto num_packets = size/8;
 
+    unsigned long long last_toa = 0;
+
     for(auto ix = 0; ix < num_packets; ++ix) {
 
         auto type = (packet_ptr[ix] & 0xF000000000000000);
@@ -184,8 +185,8 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
             continue;
 
         auto addr = (packet_ptr[ix] & 0x0FFFF00000000000) >> 44;
-        std::uint8_t x = ((addr >> 1) & 0x00FC) | (addr & 0x0003);
-        std::uint8_t y = ((addr >> 8) & 0x00FE) | ((addr >> 2) & 0x0001);
+        std::uint64_t x = ((addr >> 1) & 0x00FC) | (addr & 0x0003);
+        std::uint64_t y = ((addr >> 8) & 0x00FE) | ((addr >> 2) & 0x0001);
 
         auto tot = (packet_ptr[ix] & 0x000000003FF00000) >> 20;
 
@@ -197,15 +198,17 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
 
         auto tot_toa = (tot << 38) | full_toa;
 
-        mTempBuffer.push_back(x);
-        mTempBuffer.push_back(y);
-        mTempBuffer.push_back(tot_toa >> 40);
-        mTempBuffer.push_back((tot_toa >> 32) & 0xFF);
-        mTempBuffer.push_back((tot_toa >> 24) & 0xFF);
-        mTempBuffer.push_back((tot_toa >> 16) & 0xFF);
-        mTempBuffer.push_back((tot_toa >> 8) & 0xFF);
-        mTempBuffer.push_back(tot_toa & 0xFF);
+        auto parsed_packet = (x << 56) | (y << 48) | tot_toa;
+        mTempBuffer.push_back(parsed_packet);
 
+    }
+
+    last_sec_packets += num_packets;
+    auto new_time = std::chrono::high_resolution_clock::now();
+    if(std::chrono::duration_cast<std::chrono::seconds>(new_time - last_echo_time).count() >= 1) {
+        last_echo_time = new_time;
+        mThread.sendLog("Received " + std::to_string(last_sec_packets) + " packets/s");
+        last_sec_packets = 0;
     }
 
     mPublishSocket->send(zmq::buffer(mTempBuffer));
