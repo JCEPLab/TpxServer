@@ -47,6 +47,10 @@ void UdpThread::handleCommand(ServerCommand cmd, const DataVec &data) {
         sendRawDataServerPath(data);
         break;
 
+    case ServerCommand::RESET_TOA_ROLLOVER_COUNTER:
+        resetToaRolloverCounter(data);
+        break;
+
     default:
         sendError(ServerCommand::UNKNOWN_COMMAND);
         return;
@@ -88,5 +92,17 @@ void UdpThread::sendRawDataServerPath(const DataVec &data) {
     std::memcpy(response.data(), server_path.data(), server_path.size());
 
     sendResponse(response);
+
+}
+
+void UdpThread::resetToaRolloverCounter(const DataVec &data) {
+
+    if(data.size() != 0) {
+        sendError(ServerCommand::INVALID_COMMAND_DATA);
+        return;
+    }
+
+    mUdpManager->resetToaRolloverCounter();
+    sendResponse(data);
 
 }

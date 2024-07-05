@@ -12,6 +12,7 @@
 
 #include "server/UdpThread.h"
 #include "server/ClusterThread.h"
+#include "server/HistogramThread.h"
 
 #include "server/TimepixConnectionManager.h"
 #include "server/PythonConnectionManager.h"
@@ -39,6 +40,7 @@ void CommsThread::execute() {
     mClientManager->open(mSettings.outgoing_port);
 
     startClusterThread();
+    startHistogramThread();
 
     while(!shouldCancel()) {
 
@@ -87,6 +89,13 @@ void CommsThread::execute() {
     }
     if(mClusterCommandSocket)
         mClusterCommandSocket->close();
+
+    if(mHistogramThread) {
+        mHistogramThread->cancel();
+        mHistogramThread = nullptr; // should auto-delete once run() is finished
+    }
+    if(mHistogramCommandSocket)
+        mHistogramCommandSocket->close();
 
     DEBUG("TCP thread terminated");
 
@@ -138,6 +147,17 @@ void CommsThread::startClusterThread() {
 
 }
 
+void CommsThread::startHistogramThread() {
+
+    if(mHistogramThread)
+        return;
+
+    mHistogramThread = new HistogramThread(*this);
+    mHistogramCommandSocket = mHistogramThread->getCommandClient();
+    QThreadPool::globalInstance()->start(mHistogramThread);
+
+}
+
 zmq::context_t& CommsThread::getZmq() {
 
     return mZmq;
@@ -153,5 +173,11 @@ zmq::socket_t* CommsThread::getUdpThreadSocket() {
 zmq::socket_t* CommsThread::getClusterThreadSocket() {
 
     return mClusterCommandSocket.get();
+
+}
+
+zmq::socket_t* CommsThread::getHistogramThreadSocket() {
+
+    return mHistogramCommandSocket.get();
 
 }

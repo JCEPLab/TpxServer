@@ -50,6 +50,11 @@ void ClusterThread::handleCommand(ServerCommand cmd, const DataVec &data) {
 
     case ServerCommand::FLUSH_CLUSTERS:
         flushClusters(data);
+        break;
+
+    case ServerCommand::SET_CLUSTER_PATH:
+        setClusterPath(data);
+        break;
 
     default:
         sendError(ServerCommand::UNKNOWN_COMMAND);
@@ -116,5 +121,26 @@ void ClusterThread::flushClusters(const DataVec &data) {
     mClusterManager->flush();
 
     sendResponse({});
+
+}
+
+void ClusterThread::setClusterPath(const DataVec &data) {
+
+    std::vector<char> path;
+    for(auto x : data) {
+        path.push_back(static_cast<char>(x));
+    }
+    path.push_back('\0');
+
+    std::string s(path.data());
+
+    DEBUG("Setting save path for cluster files to: " + s);
+
+    if(mClusterManager->setSaveFile(s)) {
+        sendResponse(data);
+    } else {
+        emit warn("Unable to open path \"" + s + "\" for cluster output");
+        sendError(ServerCommand::CANT_OPEN_FILE);
+    }
 
 }

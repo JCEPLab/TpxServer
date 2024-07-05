@@ -19,6 +19,7 @@ public:
 
     void setRawTpxPath(const DataVec &data);
     void sendRawDataServerPath(const DataVec &data);
+    void resetToaRolloverCounter(const DataVec &data);
 
 private:
     std::string mHostIp;

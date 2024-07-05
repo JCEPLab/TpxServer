@@ -74,12 +74,19 @@ enum class ServerCommand : std::uint32_t {
     SET_UDP_PORT = 500,
     SET_RAW_TPX3_PATH = 501,
     GET_RAW_DATA_SERVER_PATH = 502,
+    RESET_TOA_ROLLOVER_COUNTER = 503,
 
 // Commands to control the clustering server
     GET_CLUSTER_SERVER_PATH = 600,
     SET_CLUSTER_INPUT_SERVER = 601,
     SET_CLUSTER_PARAMETERS = 602,
     FLUSH_CLUSTERS = 603,
+    SET_CLUSTER_PATH = 604,
+
+// Commands to control the histogramming server
+    GET_HISTOGRAM_SERVER_PATH = 700,
+    SET_HISTOGRAM_INPUT_SERVER = 701,
+    SET_HISTOGRAM_OUTPUT_PERIOD = 702,
 
 // Error codes
     INVALID_COMMAND_DATA = 993,

@@ -19,6 +19,7 @@ public:
     void setClusterInputServer(const DataVec &data);
     void setClusterParameters(const DataVec &data);
     void flushClusters(const DataVec &data);
+    void setClusterPath(const DataVec &data);
 
 private:
     std::string mRawPacketAddr {};

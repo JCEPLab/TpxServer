@@ -62,14 +62,23 @@ const std::map<ServerCommand, void (PythonConnectionManager::*)(const DataVec &)
 
 std::set<ServerCommand> UDP_THREAD_FORWARD_COMMANDS {
     ServerCommand::SET_RAW_TPX3_PATH,
-    ServerCommand::GET_RAW_DATA_SERVER_PATH
+    ServerCommand::GET_RAW_DATA_SERVER_PATH,
+    ServerCommand::RESET_TOA_ROLLOVER_COUNTER
 };
 
 std::set<ServerCommand> CLUSTER_THREAD_FORWARD_COMMANDS {
     ServerCommand::GET_CLUSTER_SERVER_PATH,
     ServerCommand::SET_CLUSTER_INPUT_SERVER,
     ServerCommand::SET_CLUSTER_PARAMETERS,
-    ServerCommand::FLUSH_CLUSTERS
+    ServerCommand::FLUSH_CLUSTERS,
+    ServerCommand::SET_CLUSTER_PATH
+};
+
+std::set<ServerCommand> HISTOGRAM_THREAD_FORWARD_COMMANDS {
+    ServerCommand::GET_HISTOGRAM_SERVER_PATH,
+    ServerCommand::SET_HISTOGRAM_INPUT_SERVER,
+    ServerCommand::SET_HISTOGRAM_OUTPUT_PERIOD
+
 };
 
 PythonConnectionManager::PythonConnectionManager(CommsThread &thread, TimepixConnectionManager &tpx) :
@@ -155,6 +164,8 @@ void PythonConnectionManager::handleCommand(zmq::message_t &command) {
         forwardToSecondaryThread(mThread.getUdpThreadSocket(), command);
     } else if (CLUSTER_THREAD_FORWARD_COMMANDS.contains(command_code)) {
         forwardToSecondaryThread(mThread.getClusterThreadSocket(), command);
+    } else if (HISTOGRAM_THREAD_FORWARD_COMMANDS.contains(command_code)) {
+        forwardToSecondaryThread(mThread.getHistogramThreadSocket(), command);
     } else {
         sendError(ServerCommand::UNKNOWN_COMMAND);
         return;

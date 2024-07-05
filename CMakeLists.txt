@@ -51,6 +51,10 @@ add_executable(TpxServer
         src/server/ClusteringManager.cpp
 
         src/clustering_test.cpp
+        include/server/HistogramThread.h
+        include/server/HistogramManager.h
+        src/server/HistogramThread.cpp
+        src/server/HistogramManager.cpp
 
     )
 

@@ -30,6 +30,8 @@ public:
 
     std::string getPublishServerAddress();
 
+    void resetToaRolloverCounter();
+
 private:
     void parseBytes(const std::vector<std::uint8_t> &buffer, std::size_t size);
     void publishRawData(const std::vector<std::uint8_t> &buffer, std::size_t size);
@@ -47,6 +49,10 @@ private:
 
     std::vector<std::uint64_t> mTempBuffer {}; // allocated to the same size as mUdpBuffer; this avoids constant malloc's
     std::unique_ptr<zmq::socket_t> mPublishSocket {nullptr};
+
+    std::uint8_t mRolloverCounter {0};
+    bool mHalfwayToRollover {false};
+    std::uint64_t mLastToA {0};
 
 };
 

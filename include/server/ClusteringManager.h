@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <fstream>
 
 #include "ClusterThread.h"
 
@@ -24,30 +25,18 @@ public:
     void flush(); // finishes all open clusters
     void handlePackets(const std::uint64_t *data, std::size_t num_packets);
 
+    bool setSaveFile(const std::string &path);
+
 private:
     ClusterThread &mThread;
 
     std::unique_ptr<zmq::socket_t> mPublishSocket {nullptr};
     std::unique_ptr<zmq::socket_t> mRawPacketSocket {nullptr};
 
-    // clustering parameters
-    //int mMaxSeparationXY {5};
-    //int mMaxSeparationT {100};
-    //int mMaxRange {20};
-
     std::unique_ptr<ClusterList> mOpenClusters { nullptr };
 
-    // reusable arrays
-    //std::vector<std::size_t> mIndices {};
-    //std::vector<std::size_t> mUniqueIndices {};
-    //std::vector<double> mAccumX {};
-    //std::vector<double> mAccumY {};
-    //std::vector<double> mAccumT {};
-    //std::vector<double> mAccumToT {};
-    //std::vector<std::size_t> mInvertedIndices {};
-    //std::vector<unsigned long long> mCentroids {};
-
-
+    std::ofstream mFile {};
+    std::uint64_t mSavedClusters {0};
 
 };
 

@@ -125,7 +125,7 @@ bool UdpConnectionManager::setSaveFile(const std::string &path) {
         mFile.close();
 
     if(path.empty()) {
-        DEBUG("Not saving to file");
+        DEBUG("Not saving raw packets to file");
         return true;
     }
 
@@ -144,7 +144,7 @@ bool UdpConnectionManager::setSaveFile(const std::string &path) {
     }
 
     DEBUG("Saving to file " + path);
-    mThread.sendLog("Saving image to " + path);
+    mThread.sendLog("Saving raw packets to " + path);
 
     return true;
 
@@ -196,10 +196,23 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
 
         auto full_toa = (stime << 18) | (toa << 4) | ftoa;
 
-        auto tot_toa = (tot << 38) | full_toa;
+        constexpr auto quarter_time = (static_cast<std::uint64_t>(1)<<32);
+        constexpr auto three_quarter_time = 3*quarter_time;
+
+        if(full_toa > quarter_time && full_toa < three_quarter_time)
+            mHalfwayToRollover = true;
+
+        if(mHalfwayToRollover && (mLastToA > three_quarter_time) && (full_toa < quarter_time)) {
+            mHalfwayToRollover = false;
+            mRolloverCounter = (mRolloverCounter + 1) & 0x0F;
+        }
+
+        auto tot_toa = (tot << 38) | (static_cast<std::uint64_t>(mRolloverCounter) << 34) | full_toa;
 
         auto parsed_packet = (x << 56) | (y << 48) | tot_toa;
         mTempBuffer.push_back(parsed_packet);
+
+        mLastToA = full_toa;
 
     }
 
@@ -212,5 +225,11 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
     }
 
     mPublishSocket->send(zmq::buffer(mTempBuffer));
+
+}
+
+void UdpConnectionManager::resetToaRolloverCounter() {
+
+    mRolloverCounter = 0;
 
 }

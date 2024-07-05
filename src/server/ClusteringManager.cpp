@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "server/CommsThread.h" // for htonll
+
 struct Packet {
 
     std::uint64_t raw_value;
@@ -236,7 +238,7 @@ void ClusteringManager::handlePackets(const std::uint64_t *data, std::size_t num
             mOpenClusters->add(click); // create new cluster
         }
 
-        for(std::int64_t cix = mOpenClusters->size() - 1; cix >= 0; --cix) {
+        for(std::int64_t cix = mOpenClusters->size() - 1; cix >= 0; --cix) { // reverse iteration, so that we don't accidentally remove prior objects while iterating
             auto &cluster = mOpenClusters->get(cix);
             if(click.t() > cluster.tmax + Cluster::settings.max_t_separation) {
                 output.push_back(cluster.toRawValue());
@@ -255,6 +257,14 @@ void ClusteringManager::handlePackets(const std::uint64_t *data, std::size_t num
         last_update_time = new_time;
     }
 
+    if(!output.empty() && mFile) {
+        for(const auto &cluster : output) {
+            auto ordered_cluster = io::htonll(cluster); // fix byte order if necessary
+            mFile.write(reinterpret_cast<const char*>(&ordered_cluster), sizeof(ordered_cluster));
+        }
+        //DEBUG("Saved " + std::to_string(output.size()) + " clusters to file");
+    }
+
     mPublishSocket->send(zmq::buffer(output), zmq::send_flags::dontwait);
 
 }
@@ -266,6 +276,39 @@ void ClusteringManager::setClusterParameters(int max_sep_xy, int max_sep_t, int 
     Cluster::settings.max_t_separation = max_t_sep;
 
     DEBUG("Changed cluster parameters to [XY=" + std::to_string(max_sep_xy) + ", T=" + std::to_string(max_sep_t) + ", max separation=" + std::to_string(max_t_sep) + "]");
+
+}
+
+bool ClusteringManager::setSaveFile(const std::string &path) {
+
+    if(mFile.is_open()) {
+        mFile.close();
+    }
+
+    if(path.empty()) {
+        DEBUG("Not saving clusters to file");
+        return true;
+    }
+
+    bool success = true;
+
+    try {
+        mFile.open(path, std::ios_base::out | std::ios_base::binary);
+        mFile << "CLUSTERS"; // header, and 8 reserved bytes to store the size
+    } catch (...) {
+        success = false;
+    }
+
+    success &= mFile.is_open();
+    if(!success){
+        DEBUG("Error opening file at " + path);
+        return false;
+    }
+
+    DEBUG("Saving clusters to file " + path);
+    mThread.sendLog("Saving clusters to " + path);
+
+    return true;
 
 }
 
