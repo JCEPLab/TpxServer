@@ -178,6 +178,9 @@ void ClusteringManager::poll() {
         zmq::message_t msg;
         auto has_msg = mRawPacketSocket->recv(msg, zmq::recv_flags::dontwait);
 
+        if(has_msg)
+            ++mReceivedChunks;
+
         if(has_msg && msg.size() != 0) {
             auto num_packets = msg.size() / 8;
             auto packet_ptr = reinterpret_cast<const std::uint64_t*>(msg.data());
@@ -252,8 +255,9 @@ void ClusteringManager::handlePackets(const std::uint64_t *data, std::size_t num
 
     auto new_time = std::chrono::high_resolution_clock::now();
     if(std::chrono::duration_cast<std::chrono::milliseconds>(new_time - last_update_time).count() > 1000) {
-        mThread.sendLog("Clustered " + std::to_string(num_new_clusters) + " clusters/s; " + std::to_string(mOpenClusters->size()) + " clusters are still in progress");
+        mThread.sendLog("Clusters: [" + std::to_string(mReceivedChunks) +  "] " + std::to_string(num_new_clusters) + " clusters/s; " + std::to_string(mOpenClusters->size()) + " clusters are still in progress");
         num_new_clusters = 0;
+        mReceivedChunks = 0;
         last_update_time = new_time;
     }
 

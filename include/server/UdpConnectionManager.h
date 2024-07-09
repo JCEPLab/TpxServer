@@ -54,6 +54,8 @@ private:
     bool mHalfwayToRollover {false};
     std::uint64_t mLastToA {0};
 
+    int mReceivedChunks {0};
+
 };
 
 #endif // UDPCONNECTIONMANAGER_H

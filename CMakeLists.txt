@@ -14,6 +14,7 @@ option(BUILD_STATIC ON)
 set(ENABLE_PRECOMPILED OFF)
 option(BUILD_TESTS OFF)
 option(CPPZMQ_BUILD_TESTS OFF)
+set(POLLER "epoll")
 
 add_executable(TpxServer
         src/main.cpp

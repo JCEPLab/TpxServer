@@ -38,6 +38,8 @@ private:
     std::ofstream mFile {};
     std::uint64_t mSavedClusters {0};
 
+    int mReceivedChunks {0};
+
 };
 
 #endif // CLUSTERINGMANAGER_H

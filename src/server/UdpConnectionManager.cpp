@@ -217,11 +217,14 @@ void UdpConnectionManager::publishRawData(const std::vector<std::uint8_t> &data,
     }
 
     last_sec_packets += num_packets;
+    ++mReceivedChunks;
+
     auto new_time = std::chrono::high_resolution_clock::now();
     if(std::chrono::duration_cast<std::chrono::seconds>(new_time - last_echo_time).count() >= 1) {
         last_echo_time = new_time;
-        mThread.sendLog("Received " + std::to_string(last_sec_packets) + " packets/s");
+        mThread.sendLog("Parsing: [" + std::to_string(mReceivedChunks) + "] " + std::to_string(last_sec_packets) + " packets/s");
         last_sec_packets = 0;
+        mReceivedChunks = 0;
     }
 
     mPublishSocket->send(zmq::buffer(mTempBuffer));
